@@ -1,0 +1,48 @@
+# Use Node.js 18 Alpine
+FROM node:18-alpine
+
+# Install Docker CLI (required for dockerode to work properly)
+RUN apk add --no-cache \
+    docker \
+    curl \
+    bash
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY prisma ./prisma/
+
+# Install dependencies
+RUN npm ci --only=production
+
+# Copy source code
+COPY . .
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Build the application
+RUN npm run build
+
+# Create non-root user with Docker group access
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nextjs -u 1001 -G nodejs
+RUN addgroup docker && adduser nextjs docker
+
+# Copy built application and set permissions
+RUN chown -R nextjs:nodejs /app
+USER nextjs
+
+# Expose port
+EXPOSE 3000
+
+# Set environment variables
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+ENV DOCKER_HOST=unix:///var/run/docker.sock
+
+# Start the application
+CMD ["npm", "start"]

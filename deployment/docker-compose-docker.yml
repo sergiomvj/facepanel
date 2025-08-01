@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  # Main PanelX Application with Docker integration
+  panelx:
+    build:
+      context: ./admin-panel
+      dockerfile: Dockerfile
+    container_name: panelx-app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=file:/app/database/custom.db
+      - JWT_SECRET=panelx-secret-key-12345
+      - NEXTAUTH_SECRET=nextauth-secret-key-12345
+      - NEXTAUTH_URL=http://localhost:3000
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - ./database:/app/database
+      - ./storage:/app/storage
+      - /var/run/docker.sock:/var/run/docker.sock:ro  # Mount Docker socket
+    restart: unless-stopped
+    networks:
+      - panelx-network
+    privileged: true  # Required for Docker socket access
+
+  # Database service (SQLite file management)
+  database:
+    image: alpine:latest
+    container_name: panelx-database
+    volumes:
+      - ./database:/database
+      - ./storage/backups:/backups
+    command: sh -c "chmod -R 755 /database && tail -f /dev/null"
+    restart: unless-stopped
+    networks:
+      - panelx-network
+
+networks:
+  panelx-network:
+    driver: bridge
+
+volumes:
+  panelx-data:

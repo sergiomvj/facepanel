@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # Admin Panel (Next.js Application)
+  admin-panel:
+    build:
+      context: ./admin-panel
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=file:./database/custom.db
+    volumes:
+      - ./database:/app/database
+      - ./storage:/app/storage
+    depends_on:
+      - database
+    restart: unless-stopped
+    networks:
+      - panelx-network
+
+  # API Service (Standalone API if needed)
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=file:../database/custom.db
+    volumes:
+      - ./database:/database
+      - ./storage:/storage
+    depends_on:
+      - database
+    restart: unless-stopped
+    networks:
+      - panelx-network
+
+  # Database (SQLite - file-based)
+  database:
+    image: alpine:latest
+    volumes:
+      - ./database:/database
+      - ./storage/backups:/backups
+    command: sh -c "chmod -R 755 /database && tail -f /dev/null"
+    restart: unless-stopped
+    networks:
+      - panelx-network
+
+  # Nginx Reverse Proxy (Optional)
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./storage/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - admin-panel
+      - api
+    restart: unless-stopped
+    networks:
+      - panelx-network
+
+networks:
+  panelx-network:
+    driver: bridge
+
+volumes:
+  database_data:
+  storage_data:
