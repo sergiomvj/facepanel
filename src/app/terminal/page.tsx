@@ -154,6 +154,8 @@ Swap:            0B          0B          0B`
   }
 
   const downloadOutput = () => {
+    if (!mounted) return
+    
     const text = output.join('\n')
     const blob = new Blob([text], { type: 'text/plain' })
     const url = URL.createObjectURL(blob)
@@ -237,10 +239,16 @@ Swap:            0B          0B          0B`
 }
 
 export default function TerminalPage() {
+  const [mounted, setMounted] = useState(false)
   const [sessions, setSessions] = useState<TerminalSession[]>([])
   const [activeSession, setActiveSession] = useState<string | null>(null)
   const [selectedContainer, setSelectedContainer] = useState('')
   const [isFullscreen, setIsFullscreen] = useState(false)
+
+  // Set mounted state
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Mock containers data
   const containers = [
@@ -252,7 +260,7 @@ export default function TerminalPage() {
   ]
 
   const createNewSession = () => {
-    if (!selectedContainer) return
+    if (!selectedContainer || !mounted) return
 
     const newSession: TerminalSession = {
       id: `session-${Date.now()}`,

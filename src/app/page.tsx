@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { SidebarProvider, Sidebar } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -31,6 +31,7 @@ import {
 } from 'lucide-react'
 
 export default function Home() {
+  const [mounted, setMounted] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [currentView, setCurrentView] = useState('dashboard')
   const { metrics, loading, error } = useMetrics(3000) // Refresh every 3 seconds
@@ -40,6 +41,10 @@ export default function Home() {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false)
   const [detailsType, setDetailsType] = useState<'cpu' | 'memory' | 'disk' | 'network'>('cpu')
   const [detailsTitle, setDetailsTitle] = useState('')
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const showDetails = (type: 'cpu' | 'memory' | 'disk' | 'network', title: string) => {
     setDetailsType(type)
@@ -150,7 +155,7 @@ export default function Home() {
                 </h4>
                 <p className="text-2xl font-bold">{formatUptime(metrics.system.uptime)}</p>
                 <p className="text-sm text-muted-foreground">
-                  Since {new Date(Date.now() - metrics.system.uptime * 1000).toLocaleDateString()}
+                  {mounted ? `Since ${new Date(Date.now() - metrics.system.uptime * 1000).toLocaleDateString()}` : 'Loading...'}
                 </p>
               </div>
               

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -68,12 +68,18 @@ interface DNSRecord {
 }
 
 export default function DomainsPage() {
+  const [mounted, setMounted] = useState(false)
   const [domains, setDomains] = useState<Domain[]>([])
   const [loading, setLoading] = useState(false)
   const [selectedDomain, setSelectedDomain] = useState<Domain | null>(null)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false)
   const [dnsDialogOpen, setDnsDialogOpen] = useState(false)
+
+  // Set mounted state
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Mock data
   const mockDomains: Domain[] = [
@@ -206,14 +212,14 @@ export default function DomainsPage() {
   const getSSLStatus = (domain: Domain) => {
     if (!domain.ssl.enabled) return { text: 'HTTP Only', color: 'secondary' }
     if (domain.status === 'error') return { text: 'SSL Error', color: 'destructive' }
-    if (domain.ssl.expiresAt && domain.ssl.expiresAt < new Date()) {
+    if (mounted && domain.ssl.expiresAt && domain.ssl.expiresAt < new Date()) {
       return { text: 'Expired', color: 'destructive' }
     }
     return { text: 'Active', color: 'default' }
   }
 
   const formatExpiry = (date?: Date) => {
-    if (!date) return 'N/A'
+    if (!date || !mounted) return 'N/A'
     const now = new Date()
     const diff = date.getTime() - now.getTime()
     const days = Math.floor(diff / (1000 * 60 * 60 * 24))
@@ -257,7 +263,7 @@ export default function DomainsPage() {
     const services = ['web-server', 'api-server', 'database', 'redis-cache']
 
     const handleSubmit = async () => {
-      if (!formData.domain || !formData.service) return
+      if (!formData.domain || !formData.service || !mounted) return
 
       const newDomain: Domain = {
         id: Date.now().toString(),

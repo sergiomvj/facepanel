@@ -49,6 +49,7 @@ interface LogsViewerProps {
 }
 
 export function LogsViewer({ services = [] }: LogsViewerProps) {
+  const [mounted, setMounted] = useState(false)
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [filteredLogs, setFilteredLogs] = useState<LogEntry[]>([])
   const [selectedContainer, setSelectedContainer] = useState<string>('all')
@@ -61,22 +62,29 @@ export function LogsViewer({ services = [] }: LogsViewerProps) {
   const logsEndRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Mock log data generation
+    // Mock log data generation
   const generateMockLog = (containerId: string, containerName: string): LogEntry => {
+    if (!mounted) {
+      return {
+        id: `mock-${containerId}-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        level: 'info',
+        message: 'Loading...',
+        source: 'app',
+        containerId,
+        containerName
+      }
+    }
+
     const levels: LogEntry['level'][] = ['info', 'warn', 'error', 'debug']
     const messages = [
       'Application started successfully',
       'Database connection established',
       'Processing user request',
-      'Cache miss for key',
-      'Background job completed',
-      'Health check passed',
+      'Request completed successfully',
+      'Background task started',
       'Configuration loaded',
-      'Service registered',
-      'Request processed in 45ms',
-      'Memory usage: 128MB',
-      'CPU usage: 2.1%',
-      'Network request to external API',
+      'Service health check passed',
       'User authentication successful',
       'File uploaded successfully',
       'Email sent to user',
@@ -99,8 +107,15 @@ export function LogsViewer({ services = [] }: LogsViewerProps) {
     }
   }
 
+  // Set mounted state
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   // Initialize logs
   useEffect(() => {
+    if (!mounted) return
+    
     const initialLogs: LogEntry[] = []
     services.forEach(service => {
       for (let i = 0; i < 10; i++) {
@@ -108,11 +123,11 @@ export function LogsViewer({ services = [] }: LogsViewerProps) {
       }
     })
     setLogs(initialLogs.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()))
-  }, [services])
+  }, [services, mounted])
 
   // Auto-refresh logs
   useEffect(() => {
-    if (!isAutoRefresh || isPaused) return
+    if (!isAutoRefresh || isPaused || !mounted) return
 
     const interval = setInterval(() => {
       if (services.length > 0) {
@@ -123,7 +138,7 @@ export function LogsViewer({ services = [] }: LogsViewerProps) {
     }, 2000)
 
     return () => clearInterval(interval)
-  }, [isAutoRefresh, isPaused, services])
+  }, [isAutoRefresh, isPaused, services, mounted])
 
   // Filter logs
   useEffect(() => {

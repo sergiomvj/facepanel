@@ -44,6 +44,7 @@ interface WebTerminalProps {
 }
 
 export function WebTerminal({ services = [] }: WebTerminalProps) {
+  const [mounted, setMounted] = useState(false)
   const [sessions, setSessions] = useState<TerminalSession[]>([])
   const [activeSession, setActiveSession] = useState<string | null>(null)
   const [terminalInput, setTerminalInput] = useState('')
@@ -63,10 +64,17 @@ export function WebTerminal({ services = [] }: WebTerminalProps) {
     status: service.status
   }))
 
+  // Set mounted state
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   const connectToContainer = (containerId: string) => {
+    if (!mounted) return
+    
     setConnectionStatus('connecting')
     setSelectedContainer(containerId)
-    
+
     // Simulate connection delay
     setTimeout(() => {
       const container = containers.find(c => c.id === containerId)
