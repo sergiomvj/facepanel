@@ -1,5 +1,169 @@
 'use client'
 
+import { useState, useEffect } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { RefreshCw, Download, HardDrive } from 'lucide-react'
+
+interface Container {
+  id: string
+  name: string
+}
+
+export default function LogsPage() {
+  const [containers, setContainers] = useState<Container[]>([])
+  const [selectedContainer, setSelectedContainer] = useState<string>('')
+  const [logs, setLogs] = useState<string>('')
+  const [loadingContainers, setLoadingContainers] = useState<boolean>(true)
+  const [loadingLogs, setLoadingLogs] = useState<boolean>(false)
+  const [tail, setTail] = useState<string>('100')
+
+  useEffect(() => {
+    async function fetchContainers() {
+      try {
+        setLoadingContainers(true)
+        const response = await fetch('/api/containers')
+        if (!response.ok) {
+          throw new Error('Failed to fetch containers')
+        }
+        const data: Container[] = await response.json()
+        setContainers(data)
+        if (data.length > 0) {
+          setSelectedContainer(data[0].id)
+        }
+      } catch (error) {
+        console.error(error)
+        setLogs('Error fetching containers. Is Docker running?')
+      } finally {
+        setLoadingContainers(false)
+      }
+    }
+    fetchContainers()
+  }, [])
+
+  const fetchLogs = async (containerId: string) => {
+    if (!containerId) return
+
+    try {
+      setLoadingLogs(true)
+      setLogs('')
+      const response = await fetch(`/api/logs/${containerId}?tail=${tail}`)
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.details || 'Failed to fetch logs')
+      }
+      const data = await response.json()
+      setLogs(data.logs || 'No logs found for this container.')
+    } catch (error) {
+      console.error(error)
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred'
+      setLogs(`Error fetching logs: ${errorMessage}`)
+    } finally {
+      setLoadingLogs(false)
+    }
+  }
+
+  useEffect(() => {
+    if (selectedContainer) {
+      fetchLogs(selectedContainer)
+    }
+  }, [selectedContainer])
+
+  const handleFetchClick = () => {
+    if (selectedContainer) {
+      fetchLogs(selectedContainer)
+    }
+  }
+
+  const downloadLogs = () => {
+    const blob = new Blob([logs], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    const containerName = containers.find(c => c.id === selectedContainer)?.name || 'container'
+    a.href = url
+    a.download = `${containerName}-logs-${new Date().toISOString()}.txt`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  return (
+    <div className="p-4 sm:p-6 lg:p-8">
+      <Card>
+        <CardHeader>
+          <CardTitle>Container Logs</CardTitle>
+          <CardDescription>View real-time logs from your running containers.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row gap-4 mb-4">
+            <div className="flex-1">
+              <Label htmlFor="container-select">Container</Label>
+              <Select
+                value={selectedContainer}
+                onValueChange={setSelectedContainer}
+                disabled={loadingContainers}
+              >
+                <SelectTrigger id="container-select">
+                  <SelectValue placeholder={loadingContainers ? 'Loading...' : 'Select a container'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {containers.length > 0 ? (
+                    containers.map(container => (
+                      <SelectItem key={container.id} value={container.id}>
+                        <div className="flex items-center">
+                          <HardDrive className="w-4 h-4 mr-2" />
+                          {container.name}
+                        </div>
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-containers" disabled>
+                      No containers found
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-full sm:w-32">
+              <Label htmlFor="tail-input">Lines</Label>
+              <Input
+                id="tail-input"
+                type="number"
+                value={tail}
+                onChange={e => setTail(e.target.value)}
+                placeholder="Lines"
+              />
+            </div>
+            <div className="flex items-end gap-2">
+              <Button onClick={handleFetchClick} disabled={loadingLogs || !selectedContainer}>
+                <RefreshCw className={`w-4 h-4 mr-2 ${loadingLogs ? 'animate-spin' : ''}`} />
+                {loadingLogs ? 'Loading...' : 'Refresh'}
+              </Button>
+              <Button variant="outline" onClick={downloadLogs} disabled={!logs || logs.startsWith('Error')}>
+                <Download className="w-4 h-4 mr-2" />
+                Download
+              </Button>
+            </div>
+          </div>
+
+          <Card className="bg-black text-white font-mono text-sm mt-4">
+            <CardContent className="p-4">
+              <pre className="whitespace-pre-wrap overflow-x-auto h-96">
+                {logs}
+              </pre>
+            </CardContent>
+          </Card>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+
 import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'

@@ -1,9 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { SidebarProvider, Sidebar } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useMetrics } from '@/hooks/use-metrics'
@@ -36,6 +39,7 @@ export default function Home() {
   const [currentView, setCurrentView] = useState('dashboard')
   const { metrics, loading, error } = useMetrics(3000) // Refresh every 3 seconds
   const { metrics: history, loading: historyLoading } = useMetricsHistory(5000, 60)
+  const router = useRouter()
   
   // Process details dialog state
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false)
@@ -56,7 +60,7 @@ export default function Home() {
     { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { id: 'projects', icon: FolderOpen, label: 'Projects' },
     { id: 'services', icon: Activity, label: 'Services' },
-    { id: 'terminal', icon: Terminal, label: 'Terminal' },
+
     { id: 'logs', icon: Database, label: 'Logs' },
     { id: 'domains', icon: Globe, label: 'Domains' },
     { id: 'settings', icon: Settings, label: 'Settings' },
@@ -272,11 +276,14 @@ export default function Home() {
       case 'services':
         return <ServicesList />
       case 'terminal':
-        window.location.href = '/terminal'
+        router.push('/terminal')
+        return null
       case 'logs':
-        window.location.href = '/logs'
+        router.push('/logs')
+        return null
       case 'domains':
-        window.location.href = '/domains'
+        router.push('/domains')
+        return null
       case 'settings':
         return (
           <Card>
@@ -285,10 +292,37 @@ export default function Home() {
               <CardDescription>Configure PanelX settings and preferences</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8">
-                <Settings className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium mb-2">Settings</h3>
-                <p className="text-muted-foreground">This feature is coming soon!</p>
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-medium">Controle de Versão</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Faça upgrade ou downgrade da sua aplicação.
+                  </p>
+                </div>
+                <div className="p-6 border rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Versão Atual</p>
+                      <p className="text-2xl font-bold">1.45</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div>
+                        <Label htmlFor="version-select">Mudar para a versão</Label>
+                        <Select defaultValue="1.45">
+                          <SelectTrigger id="version-select" className="w-[180px]">
+                            <SelectValue placeholder="Selecione a versão" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1.45">1.45 (latest)</SelectItem>
+                            <SelectItem value="1.44">1.44</SelectItem>
+                            <SelectItem value="1.43">1.43</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button className="self-end">Mudar Versão</Button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -397,7 +431,7 @@ export default function Home() {
           </header>
 
           {/* Dashboard Content */}
-          <main className="flex-1 overflow-y-auto p-6">
+          <main className="flex-1 overflow-y-auto py-6">
             {renderContent()}
           </main>
         </div>
